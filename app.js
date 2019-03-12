@@ -1,3 +1,11 @@
+//TODO: Sort the anime used for recommendations by the user's score, not arbitrary 15. HIGH PRIORITY.
+//TODO: Fix centering of tags.
+//TODO: Add friendly messages on errors. (No such user, other errors)
+//TODO: Add loading bar during 16 second wait and disable input.
+//TODO: Clear results on new input.
+//TODO: Remove or give functionality to Hero Footer.
+//TODO: Add media-queries (turn img to small square and side-by-side data)
+
 window.onload = function() {
 
     const userForm = document.querySelector(".username-form");
@@ -31,8 +39,20 @@ window.onload = function() {
                     mediaContent.innerHTML = `
                     <h5 class='title is-4'>${curAnime.title}</h3>
                     <a href='${curAnime.url}'><img src='${curAnime.image_url}'></img></a>
-                    <p class='title is-5'>MAL Rank:</p>
-                    <p class='subtitle is-6'>S${curAnime.rank}</p>`;
+                    <div class="field is-grouped is-centered">
+                        <div class="control">
+                            <div class="tags has-addons is-centered">
+                                <span class="tag"># of Recommendations</span>
+                                <span class="tag is-primary">${arr[i][1]}</span>
+                            </div>
+                        </div>
+                        <div class="control">
+                            <div class="tags has-addons is-centered">
+                                <span class="tag">MAL Rank</span>
+                                <span class="tag is-primary">${curAnime.rank}</span>
+                            </div>
+                        </div>
+                    </div>`;
 
                     media.appendChild(mediaContent);
                     curRec.appendChild(media);
@@ -59,9 +79,11 @@ window.onload = function() {
                 getRecommendations(arr[i])
                     .then(data => {
                         rec = data.recommendations;
-                        for (let i = 0; i < rec.length; i++) {
-                            console.log(rec[i].mal_id + " " + rec[i].recommendation_count);
-                            recommendations[rec[i].mal_id] = (recommendations[rec[i].mal_id] || 0) + rec[i].recommendation_count;
+                        if (rec) {
+                            for (let i = 0; i < rec.length; i++) {
+                                console.log(rec[i].mal_id + " " + rec[i].recommendation_count);
+                                recommendations[rec[i].mal_id] = (recommendations[rec[i].mal_id] || 0) + rec[i].recommendation_count;
+                            }
                         }
                     });
             }
