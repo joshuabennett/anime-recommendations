@@ -1,10 +1,6 @@
-//TODO: Sort the anime used for recommendations by the user's score, not arbitrary 15. HIGH PRIORITY.
-//TODO: Fix centering of tags.
 //TODO: Add friendly messages on errors. (No such user, other errors)
-//TODO: Add loading bar during 16 second wait and disable input.
-//TODO: Clear results on new input.
+//TODO: Fix loading bar positioning by actually removing the search-bar (not making it invisible)
 //TODO: Remove or give functionality to Hero Footer.
-//TODO: Add media-queries (turn img to small square and side-by-side data)
 
 window.onload = function() {
 
@@ -14,9 +10,29 @@ window.onload = function() {
     function initiateApp(e) {
         e.preventDefault();
 
+        
+
         // Put up a loading screen
+        if(document.querySelectorAll('.recs')) {
+            const recs = document.querySelectorAll('.recs');
+            recs.forEach((rec) => {
+                rec.remove();
+            });
+        }
 
         const username = document.querySelector('#mal-input').value;
+        const searchBar = document.querySelector('.mal-search');
+        const container = document.querySelector('.search-load')
+
+        document.querySelector('#mal-input').value = '';
+        searchBar.classList.add('is-invisible');
+
+
+        const loadingBar = document.createElement('progress');
+        loadingBar.className = 'progress is-large is-primary max="100"';
+        container.appendChild(loadingBar);
+
+
         getDataFromMAL(username)
             .then(data => {
                 processData(data);
@@ -25,38 +41,72 @@ window.onload = function() {
     }
 
     // Loop through first 5 recommendations and build the HTML for each and insert into webpage
-   function buildRecs(arr) {
+   async function buildRecs(arr) {
         for(let i = 0; i < 5; i++) {
             let curRec = document.querySelector('.rec' + String(i));
             // Figure out exactly what info I want and in what Layout
             getAnimeData(arr[i][0])
                 .then(data => {
                     let curAnime = data;
-                    const media = document.createElement('div');
-                    media.className = 'media box';
-                    const mediaContent = document.createElement('div');
-                    mediaContent.className = 'media-content has-text-centered';
-                    mediaContent.innerHTML = `
-                    <h5 class='title is-4'>${curAnime.title}</h3>
-                    <a href='${curAnime.url}'><img src='${curAnime.image_url}'></img></a>
-                    <div class="field is-grouped is-centered">
-                        <div class="control">
-                            <div class="tags has-addons is-centered">
-                                <span class="tag"># of Recommendations</span>
-                                <span class="tag is-primary">${arr[i][1]}</span>
+                    const box = document.createElement('div');
+                    box.className = 'box recs'
+                    console.log(curAnime.aired.from);
+                    const airedDate = new Date(curAnime.aired.from);
+                    box.innerHTML = `
+                        <div class=' media'>
+                            <div class='media-content'>
+                                <h5 class='title is-5'>${curAnime.title}</h5>
+                            </div>
+                            <div class='media-right'>
+                                <p class='title is-6 has-text-primary'>${i+1}</p>
                             </div>
                         </div>
-                        <div class="control">
-                            <div class="tags has-addons is-centered">
-                                <span class="tag">MAL Rank</span>
-                                <span class="tag is-primary">${curAnime.rank}</span>
+                        <div class='media'>
+                            <div class='media-left'>
+                                <a href='${curAnime.url}' target="_blank"><img src='${curAnime.image_url}'></img></a>
                             </div>
-                        </div>
-                    </div>`;
-
-                    media.appendChild(mediaContent);
-                    curRec.appendChild(media);
-                });       
+                            <div class='media-content'>
+                                <div class='field'>
+                                    <div class="control">
+                                        <div class="tags has-addons">
+                                            <span class="tag"># of Recommendations</span>
+                                            <span class="tag is-primary">${arr[i][1]}</span>
+                                        </div>
+                                    </div>
+                                    <div class="control">
+                                        <div class="tags has-addons">
+                                            <span class="tag">MAL Rank</span>
+                                            <span class="tag is-primary">${curAnime.rank}</span>
+                                        </div>
+                                    </div>
+                                    <div class="control">
+                                        <div class="tags has-addons">
+                                            <span class="tag">Year</span>
+                                            <span class="tag is-primary">${airedDate.getFullYear()}</span>
+                                        </div>
+                                    </div>
+                                    <div class="control">
+                                        <div class="tags has-addons">
+                                            <span class="tag">Length</span>
+                                            <span class="tag is-primary">${curAnime.episodes} episodes</span>
+                                        </div>
+                                    </div>
+                                    <div class="section genre-section">
+                                        <div class='genres tags is-grouped-multiline'>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    curRec.appendChild(box);
+                    const genreSection = document.querySelectorAll('.genres');
+                    curAnime.genres.forEach((genre) => {
+                        genreSection[i].innerHTML += `
+                            <div class='tag is-info'>${genre.name}</div>`;
+                    });
+                    box.classList.add('slider');        
+                });     
+            await wait(800);   
         }
     }
 
@@ -76,7 +126,7 @@ window.onload = function() {
             const recommendations = {};
         
             for (let i = 0; i < 15; i++) {
-                getRecommendations(arr[i])
+                getRecommendations(arr[i][0])
                     .then(data => {
                         rec = data.recommendations;
                         if (rec) {
@@ -88,10 +138,20 @@ window.onload = function() {
                     });
             }
             await wait(16000)
+            const loadingBar = document.querySelector('.progress');
+            loadingBar.remove();
+            const searchBar = document.querySelector('.mal-search');
+            searchBar.classList.remove('is-invisible');
             const sortedRecommendations = sortObject(recommendations);
-            //console.log(sortedRecommendations);
+            
+            // Make a new array containing only IDs so we can compare with recommendations.
+            const recIds = [];
+            arr.forEach( (item) => {
+                recIds.push(item[0]);
+            });
+
             const filteredRecommendations = sortedRecommendations.filter(function(item) {
-                return (arr.indexOf(Number(item[0]))) === -1;
+                return (recIds.indexOf(Number(item[0]))) === -1;
             });
             console.log(arr);
             //console.log(filteredRecommendations);
@@ -115,15 +175,19 @@ window.onload = function() {
 
     // API Fetch from Jikan for a MAL user's completed anime watch list.
     // Returns an array that contains all those anime's IDs.
+    // Would be better to pass full anime object in an array, instead of just id.
     async function getDataFromMAL(username) {
             var animelist = [];
 
             let response = await fetch(`https://api.jikan.moe/v3/user/${username}/animelist/completed`);
             let data = await response.json();
             for (let i = 0; i < data.anime.length; i++) {
-                animelist.push(data.anime[i].mal_id);
+                animelist.push([data.anime[i].mal_id, data.anime[i].score]);
             }
-           return animelist;
+            sortedAnimelist = animelist.sort((a,b) => {
+                return b[1] - a[1];
+            });
+           return sortedAnimelist;
     }
 
     // API fetch for an anime.

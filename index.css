@@ -1,4 +1,47 @@
+@keyframes slideInFromRight {
+    0% {
+    opacity: 0;
+    transform: translateX(-100%);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
 img {
     width: 200px;
     height: 300px;
+}
+
+img:hover {
+    opacity: 0.5;
+}
+
+.recs {
+    padding: 25px;
+    border: solid 1px black;
+
+}
+
+.anime-title {
+    border-bottom: solid 1px lightgray;
+}
+
+.slider {
+    animation: 1s ease-out 0s 1 slideInFromRight;
+
+}
+
+/*  Work-around for transitions to work, must be a better way */
+.rec0, .rec1, .rec2, .rec3, .rec4 {
+    width: 475.11px; 
+
+}
+
+.genre-section {
+    border-top: solid 1px rgba(219,219,219,.5);;
+    margin-top: 15px;
+    padding-top: 15px;
+    padding-left: 0px;
 }
