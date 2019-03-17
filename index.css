@@ -45,3 +45,15 @@ img:hover {
     padding-top: 15px;
     padding-left: 0px;
 }
+
+.disappear {
+    display: none;
+}
+
+.search-load {
+    padding-bottom: 0px;
+}
+
+.user-title {
+    padding-top: 25px;
+}

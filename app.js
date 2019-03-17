@@ -1,8 +1,10 @@
 //TODO: Add friendly messages on errors. (No such user, other errors)
-//TODO: Fix loading bar positioning by actually removing the search-bar (not making it invisible)
+// TODO: Add a radio box for DEEP SEARCH functionality (checks all Anime but takes longer).
 //TODO: Remove or give functionality to Hero Footer.
 
 window.onload = function() {
+
+    const RATE_LIMIT = 29;
 
     const userForm = document.querySelector(".username-form");
     userForm.addEventListener('submit', initiateApp);
@@ -25,23 +27,40 @@ window.onload = function() {
         const container = document.querySelector('.search-load')
 
         document.querySelector('#mal-input').value = '';
-        searchBar.classList.add('is-invisible');
+        searchBar.classList.add('disappear');
 
 
         const loadingBar = document.createElement('progress');
-        loadingBar.className = 'progress is-large is-primary max="100"';
+        loadingBar.className = 'progress is-large is-primary';
+        loadingBar.setAttribute('max', '100%');
+        loadingBar.setAttribute('value', '0');
         container.appendChild(loadingBar);
 
+        if(document.querySelector('.user-title')) {
+                const loadingTitle = document.querySelector('.user-title');
+                loadingTitle.innerHTML = `Evaluating Recommendations for <span class='mal-name'>${username}</span>...`;
+        } else {
+            const loadingTitle = document.createElement('h3');
+            loadingTitle.className = 'user-title title is-4 has-text-white';
+            loadingTitle.innerHTML = `Evaluating Recommendations for <span class='mal-name'>${username}</span>...`;
+            container.insertBefore(loadingTitle, loadingBar);
+        }
 
-        getDataFromMAL(username)
+
+        getDataFromMAL(username, 1)
             .then(data => {
-                processData(data);
+                console.log(data);
+                const sortedData = sortData(data);
+                processData(sortedData);
             })
         
     }
 
     // Loop through first 5 recommendations and build the HTML for each and insert into webpage
    async function buildRecs(arr) {
+        const recTitle = document.querySelector(".user-title");
+        const username = document.querySelector('.mal-name').textContent;
+        recTitle.innerHTML = `Recommendations for ${username}`;
         for(let i = 0; i < 5; i++) {
             let curRec = document.querySelector('.rec' + String(i));
             // Figure out exactly what info I want and in what Layout
@@ -123,25 +142,49 @@ window.onload = function() {
     // Takes in a sorted array of top 15 anime, convert to Object and creates an obect that counts the reccomended anime for each of their top 15 anime.
     // Returns a sorted array of recommendations based on weighted occurences.
     async function processData(arr) {
+            const isDeepSearch = document.querySelector('#deep-box').value;
+            var searchLength = 0;
             const recommendations = {};
-        
-            for (let i = 0; i < 15; i++) {
-                getRecommendations(arr[i][0])
+            let rateCounter = 0;
+
+            if(isDeepSearch) {
+                searchLength = arr.length;
+            } else {
+                searchLength = RATE_LIMIT;
+            }
+
+            for (let i = 0; i < searchLength; i++) {
+                console.log(`Progress: ${i} of ${searchLength}.`);
+                console.log(i+1 * 100 / searchLength);
+                const loading = document.querySelector('.progress');
+                loading.setAttribute('value', String(Math.floor(i+1 * 100 / searchLength)));
+                console.log(loading.value);
+                rateCounter++;
+                if(rateCounter > RATE_LIMIT) {
+                    await wait(RATE_LIMIT * 1000 + 2000);
+                    rateCounter = 0;
+                }
+                await getRecommendations(arr[i][0])
                     .then(data => {
                         rec = data.recommendations;
                         if (rec) {
                             for (let i = 0; i < rec.length; i++) {
-                                console.log(rec[i].mal_id + " " + rec[i].recommendation_count);
+                                //console.log(rec[i].mal_id + " " + rec[i].recommendation_count);
                                 recommendations[rec[i].mal_id] = (recommendations[rec[i].mal_id] || 0) + rec[i].recommendation_count;
                             }
                         }
+                    })
+                    .catch( error => {
+                        console.log(error);
+                        processError(error);
+                        return error;
                     });
             }
-            await wait(16000)
+            await wait(RATE_LIMIT*1000 / 2);
             const loadingBar = document.querySelector('.progress');
             loadingBar.remove();
             const searchBar = document.querySelector('.mal-search');
-            searchBar.classList.remove('is-invisible');
+            searchBar.classList.remove('disappear');
             const sortedRecommendations = sortObject(recommendations);
             
             // Make a new array containing only IDs so we can compare with recommendations.
@@ -153,10 +196,19 @@ window.onload = function() {
             const filteredRecommendations = sortedRecommendations.filter(function(item) {
                 return (recIds.indexOf(Number(item[0]))) === -1;
             });
-            console.log(arr);
-            //console.log(filteredRecommendations);
             buildRecs(filteredRecommendations);
             return sortedRecommendations;
+    }
+
+    function processError(error) {
+        const searchBar = document.querySelector(".mal-search");
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'notification is-danger';
+        errorMsg.innerHTML = `
+        <button class='delete'></button>
+        ${JSON.stringify(error)}`;
+        document.insertBefore(errorMsg, searchBar);
+        return error;
     }
 
 
@@ -176,18 +228,27 @@ window.onload = function() {
     // API Fetch from Jikan for a MAL user's completed anime watch list.
     // Returns an array that contains all those anime's IDs.
     // Would be better to pass full anime object in an array, instead of just id.
-    async function getDataFromMAL(username) {
+    async function getDataFromMAL(username, page) {
             var animelist = [];
-
-            let response = await fetch(`https://api.jikan.moe/v3/user/${username}/animelist/completed`);
+            let response = await fetch(`https://api.jikan.moe/v3/user/${username}/animelist/completed/${page}`);
             let data = await response.json();
             for (let i = 0; i < data.anime.length; i++) {
                 animelist.push([data.anime[i].mal_id, data.anime[i].score]);
             }
-            sortedAnimelist = animelist.sort((a,b) => {
+            //console.log(page + ' ' + animelist);
+            if(animelist.length < 300) {
+               console.log('exit');
+               return animelist;
+            }
+            return animelist.concat(await getDataFromMAL(username, page+1));
+    }
+
+    function sortData(arr) {
+            sortedAnimelist = arr.sort((a,b) => {
                 return b[1] - a[1];
             });
-           return sortedAnimelist;
+            console.log('sorted: ' + sortedAnimelist);
+            return sortedAnimelist;
     }
 
     // API fetch for an anime.
@@ -203,7 +264,7 @@ window.onload = function() {
     async function getRecommendations(id) {
         let response = await fetch(`https://api.jikan.moe/v3/anime/${id}/recommendations`);
         await wait(1000);
-        let data = response.json();
+        let data = await response.json();
         return data;
     }
 }
