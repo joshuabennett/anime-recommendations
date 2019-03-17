@@ -57,3 +57,7 @@ img:hover {
 .user-title {
     padding-top: 25px;
 }
+
+label.checkbox {
+    padding-top: 10px;
+}

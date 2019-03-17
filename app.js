@@ -32,7 +32,7 @@ window.onload = function() {
 
         const loadingBar = document.createElement('progress');
         loadingBar.className = 'progress is-large is-primary';
-        loadingBar.setAttribute('max', '100%');
+        loadingBar.setAttribute('max', '100');
         loadingBar.setAttribute('value', '0');
         container.appendChild(loadingBar);
 
@@ -142,12 +142,13 @@ window.onload = function() {
     // Takes in a sorted array of top 15 anime, convert to Object and creates an obect that counts the reccomended anime for each of their top 15 anime.
     // Returns a sorted array of recommendations based on weighted occurences.
     async function processData(arr) {
-            const isDeepSearch = document.querySelector('#deep-box').value;
+            const isDeepSearch = document.querySelector('#deep-box');
+            const loading = document.querySelector('.progress');
             var searchLength = 0;
             const recommendations = {};
             let rateCounter = 0;
 
-            if(isDeepSearch) {
+            if(isDeepSearch.checked) {
                 searchLength = arr.length;
             } else {
                 searchLength = RATE_LIMIT;
@@ -155,10 +156,7 @@ window.onload = function() {
 
             for (let i = 0; i < searchLength; i++) {
                 console.log(`Progress: ${i} of ${searchLength}.`);
-                console.log(i+1 * 100 / searchLength);
-                const loading = document.querySelector('.progress');
-                loading.setAttribute('value', String(Math.floor(i+1 * 100 / searchLength)));
-                console.log(loading.value);
+                loading.value = String(Math.floor((i+1) * 100 / searchLength));
                 rateCounter++;
                 if(rateCounter > RATE_LIMIT) {
                     await wait(RATE_LIMIT * 1000 + 2000);
@@ -180,7 +178,7 @@ window.onload = function() {
                         return error;
                     });
             }
-            await wait(RATE_LIMIT*1000 / 2);
+            //await wait(RATE_LIMIT*1000 / 2);
             const loadingBar = document.querySelector('.progress');
             loadingBar.remove();
             const searchBar = document.querySelector('.mal-search');
@@ -263,7 +261,7 @@ window.onload = function() {
     // Returns Promise for an anime recommendation stream.
     async function getRecommendations(id) {
         let response = await fetch(`https://api.jikan.moe/v3/anime/${id}/recommendations`);
-        await wait(1000);
+        await wait(500);
         let data = await response.json();
         return data;
     }
