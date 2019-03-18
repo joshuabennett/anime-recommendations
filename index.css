@@ -61,3 +61,7 @@ img:hover {
 label.checkbox {
     padding-top: 10px;
 }
+
+.error {
+    padding: 40px;
+}
