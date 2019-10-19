@@ -14,7 +14,25 @@ window.onload = function() {
     function initiateApp(e) {
         e.preventDefault();
 
+        // Load Elements
         const username = document.querySelector('#mal-input').value;
+        const searchBar = document.querySelector('.mal-search');
+        const container = document.querySelector('.search-load')
+
+        //Remove any old errors 
+        const error = document.querySelector('.error');
+        if(error) {
+            error.remove();
+        }
+
+        // Hide searchbar
+        searchBar.classList.add('disappear');
+
+        // Create loading bar and helper text
+        const loadingBar = document.createElement('progress');
+        loadingBar.className = 'progress is-large is-primary';
+        loadingBar.setAttribute('max', '100');
+        container.appendChild(loadingBar);
 
         // Call API using provided username, then sort and process the result.
         getDataFromMAL(username, 1)
@@ -24,6 +42,7 @@ window.onload = function() {
                 processData(sortedData);
             })
             .catch(error => {
+                resetLoading();
                 processError(error);
                 return error;
             });
@@ -31,39 +50,32 @@ window.onload = function() {
     }
 
     function loadingScreen() {
-                // Check if there are previous results and remove if necessary
-                if(document.querySelectorAll('.recs')) {
-                    const recs = document.querySelectorAll('.recs');
-                    recs.forEach((rec) => {
-                        rec.remove();
-                    });
-                }
-        
-                // Load Elements
-                const username = document.querySelector('#mal-input').value;
-                const searchBar = document.querySelector('.mal-search');
-                const container = document.querySelector('.search-load')
-        
-                // Hide searchbar
-                document.querySelector('#mal-input').value = '';
-                searchBar.classList.add('disappear');
-        
-                // Create loading bar and helper text
-                const loadingBar = document.createElement('progress');
-                loadingBar.className = 'progress is-large is-primary';
-                loadingBar.setAttribute('max', '100');
-                loadingBar.setAttribute('value', '0');
-                container.appendChild(loadingBar);
-        
-                if (document.querySelector('.user-title')) {
-                        const loadingTitle = document.querySelector('.user-title');
-                        loadingTitle.innerHTML = `Evaluating Recommendations for <span class='mal-name'>${username}</span>...`;
-                } else {
-                    const loadingTitle = document.createElement('h3');
-                    loadingTitle.className = 'user-title title is-4 has-text-white';
-                    loadingTitle.innerHTML = `Evaluating Recommendations for <span class='mal-name'>${username}</span>...`;
-                    container.insertBefore(loadingTitle, loadingBar);
-                }
+        // Check if there are previous results and remove if necessary
+        const username = document.querySelector('#mal-input').value;
+        document.querySelector('#mal-input').value = '';
+
+        const loadingBar = document.querySelector('.progress');
+        const container = document.querySelector('.search-load');
+        console.log(username);
+
+        loadingBar.setAttribute('value', '0');
+
+        if(document.querySelectorAll('.recs')) {
+            const recs = document.querySelectorAll('.recs');
+            recs.forEach((rec) => {
+                rec.remove();
+            });
+        }
+
+        if (document.querySelector('.user-title')) {
+                const loadingTitle = document.querySelector('.user-title');
+                loadingTitle.innerHTML = `Evaluating Recommendations for <span class='mal-name'>${username}</span>...`;
+        } else {
+            const loadingTitle = document.createElement('h3');
+            loadingTitle.className = 'user-title title is-4 has-text-white';
+            loadingTitle.innerHTML = `Evaluating Recommendations for <span class='mal-name'>${username}</span>...`;
+            container.insertBefore(loadingTitle, loadingBar);
+        }
     }
 
     // Loop through top 5 recommendations and build the HTML for each and insert into webpage
@@ -183,17 +195,14 @@ window.onload = function() {
                         }
                     })
                     .catch( error => {
-                        console.log(error);
+                        console.log(error.status);
                         processError(error);
                         return error;
                     });
             }
-            const loadingBar = document.querySelector('.progress');
-            loadingBar.remove();
-            const searchBar = document.querySelector('.mal-search');
-            searchBar.classList.remove('disappear');
             const sortedRecommendations = sortObject(recommendations);
             
+            resetLoading();
             // Make a new array containing only IDs so we can compare with recommendations.
             const recIds = [];
             arr.forEach( (item) => {
@@ -205,6 +214,13 @@ window.onload = function() {
             });
             buildRecs(filteredRecommendations);
             return sortedRecommendations;
+    }
+
+    function resetLoading() {
+        const loadingBar = document.querySelector('.progress');
+        loadingBar.remove();
+        const searchBar = document.querySelector('.mal-search');
+        searchBar.classList.remove('disappear');
     }
 
     function processError(error) {
@@ -248,7 +264,7 @@ window.onload = function() {
     async function getDataFromMAL(username, page) {
             var animelist = [];
             let response = await fetch(`https://api.jikan.moe/v3/user/${username}/animelist/completed/${page}`);
-            if (response.status === 404) {
+            if (response.status === 404 || 400) {
                 throw new Error('Username does not exist or is invalid. Please try again.');
             }
             if (response.status === 429) {
