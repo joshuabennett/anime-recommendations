@@ -2,7 +2,10 @@
 // TODO: Delete Event Listener for Error Messages.
 
 window.onload = function () {
-  const RATE_LIMIT = 25;
+  const RATE_LIMIT = 24;
+  const HEADERS = {
+    redirect: "follow",
+  };
 
   const userForm = document.querySelector(".username-form");
   userForm.addEventListener("submit", initiateApp);
@@ -30,12 +33,29 @@ window.onload = function () {
     loadingBar.setAttribute("max", "100");
     container.appendChild(loadingBar);
 
+    const animeData = {
+      completedAnime: [],
+      watchingAnime: [],
+      onHoldAnime: [],
+    };
     // Call API using provided username, then sort and process the result.
-    getDataFromMAL(username, 1)
-      .then((data) => {
+    Promise.all(
+      ["completed", "watching", "onhold"].map((status) => {
+        return getDataFromMAL(username, 1, status);
+      })
+    )
+      .then((responses) => {
         loadingScreen();
-        const sortedData = sortData(data);
-        processData(sortedData);
+        const results = [];
+        responses.forEach((response) => {
+          console.log(response);
+          sortData(response);
+          results.push(response);
+        });
+        animeData.completedAnime = results[0];
+        animeData.watchingAnime = results[1];
+        animeData.onHoldAnime = results[2];
+        processData(animeData);
       })
       .catch((error) => {
         resetLoading();
@@ -167,9 +187,9 @@ window.onload = function () {
   }
 
   // Takes in a sorted array of anime based on user score.
-  // Checks either all anime or top 29, looks at their recommendations and then adds their weighted value to an array.
+  // Checks either all anime or top 24, looks at their recommendations and then adds their weighted value to an array.
   // Returns a sorted array of recommendations based on weighted occurences.
-  async function processData(arr) {
+  async function processData(animeData) {
     const isDeepSearch = document.querySelector("#deep-box");
     const loading = document.querySelector(".progress");
     const amountToSearch = document.querySelector(".user-title");
@@ -179,7 +199,7 @@ window.onload = function () {
     let rateCounter = 0;
 
     if (isDeepSearch.checked) {
-      searchLength = arr.length;
+      searchLength = animeData.completedAnime.length;
     } else {
       searchLength = RATE_LIMIT;
     }
@@ -190,10 +210,10 @@ window.onload = function () {
       loading.value = String(Math.floor(((i + 1) * 100) / searchLength));
       rateCounter++;
       if (rateCounter > RATE_LIMIT) {
-        await wait(RATE_LIMIT * 2 * 1000 + 10000);
+        await wait(60000 - (RATE_LIMIT * 500 + 3000));
         rateCounter = 0;
       }
-      await getRecommendations(arr[i][0])
+      await getRecommendations(animeData.completedAnime[i][0])
         .then((data) => {
           rec = data.recommendations;
           if (rec) {
@@ -213,10 +233,13 @@ window.onload = function () {
     const sortedRecommendations = sortObject(recommendations);
 
     resetLoading();
-    // Make a new array containing only IDs so we can compare with recommendations.
+
+    // Make a new array containing only IDs so we can compare with recommendations with anime they've already watched.
     const recIds = [];
-    arr.forEach((item) => {
-      recIds.push(item[0]);
+    Object.keys(animeData).forEach((section) => {
+      animeData[section].forEach((item) => {
+        recIds.push(item[0]);
+      });
     });
 
     const filteredRecommendations = sortedRecommendations.filter(function (
@@ -272,11 +295,12 @@ window.onload = function () {
   // API Fetch from Jikan for a MAL user's completed anime watch list.
   // Returns an array that contains all those anime's IDs.
   // Would be better to pass full anime object in an array, instead of just id.
-  async function getDataFromMAL(username, page) {
+  async function getDataFromMAL(username, page, status) {
     var animelist = [];
     console.log(username, page);
     let response = await fetch(
-      `https://api.jikan.moe/v3/user/${username}/animelist/completed/${page}`
+      `https://api.jikan.moe/v3/user/${username}/animelist/${status}/${page}`,
+      HEADERS
     );
     if (response.status === 404 || response.status === 400) {
       throw new Error(
@@ -298,7 +322,7 @@ window.onload = function () {
       console.log("exit");
       return animelist;
     }
-    return animelist.concat(await getDataFromMAL(username, page + 1));
+    return animelist.concat(await getDataFromMAL(username, page + 1, status));
   }
 
   function sortData(arr) {
@@ -312,7 +336,7 @@ window.onload = function () {
   // API fetch for an anime.
   // Returns whole anime object stream
   async function getAnimeData(id) {
-    let response = await fetch(`https://api.jikan.moe/v3/anime/${id}`);
+    let response = await fetch(`https://api.jikan.moe/v3/anime/${id}`, HEADERS);
     let data = await response.json();
     await wait(500);
     return data;
@@ -322,7 +346,8 @@ window.onload = function () {
   // Returns Promise for an anime recommendation stream.
   async function getRecommendations(id) {
     let response = await fetch(
-      `https://api.jikan.moe/v3/anime/${id}/recommendations`
+      `https://api.jikan.moe/v3/anime/${id}/recommendations`,
+      HEADERS
     );
     await wait(500);
     let data = await response.json();
