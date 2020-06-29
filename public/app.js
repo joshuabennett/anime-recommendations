@@ -109,55 +109,56 @@ window.onload = function () {
         console.log(curAnime.aired.from);
         const airedDate = new Date(curAnime.aired.from);
         box.innerHTML = `
-                        <div class=' media'>
-                            <div class='media-content'>
+                        <div class='title-box media'>
+                            <div class='media-content title-text-box'>
+                            <i class="fas fa-tv ico"></i>
                                 <h5 class='title is-5'>${curAnime.title}</h5>
                             </div>
                             <div class='media-right'>
-                                <p class='title is-6 has-text-primary'>${
+                                <p class='title is-6 has-text-white'>${
                                   i + 1
                                 }</p>
                             </div>
                         </div>
-                        <div class='media'>
+                        <div class='media data-box'>
                             <div class='media-left'>
                                 <a href='${
                                   curAnime.url
-                                }' target="_blank"><img src='${
+                                }' target="_blank"><img class='anime-img' src='${
           curAnime.image_url
         }'></img></a>
                             </div>
                             <div class='media-content'>
                                 <div class='field'>
-                                    <div class="control">
-                                        <div class="tags has-addons">
-                                            <span class="tag"># of Recommendations</span>
-                                            <span class="tag is-primary">${
+                                    <div class="control side-box">
+                                        
+                                            <span class="side-text">Recommendations</span>
+                                            <span class="side-data">${
                                               arr[i][1]
                                             }</span>
-                                        </div>
+                                        
                                     </div>
-                                    <div class="control">
-                                        <div class="tags has-addons">
-                                            <span class="tag">MAL Rank</span>
-                                            <span class="tag is-primary">${
+                                    <div class="control side-box">
+                                        
+                                            <span class="side-text">MAL Rank</span>
+                                            <span class="side-data">${
                                               curAnime.rank
                                             }</span>
-                                        </div>
+                                        
                                     </div>
-                                    <div class="control">
-                                        <div class="tags has-addons">
-                                            <span class="tag">Year</span>
-                                            <span class="tag is-primary">${airedDate.getFullYear()}</span>
-                                        </div>
+                                    <div class="control side-box">
+                                        
+                                            <span class="side-text">Year</span>
+                                            <span class="side-data">${airedDate.getFullYear()}</span>
+                                        
                                     </div>
-                                    <div class="control">
-                                        <div class="tags has-addons">
-                                            <span class="tag">Length</span>
-                                            <span class="tag is-primary">${
+                                    <div class="control side-box">
+                                        
+                                            <span class="side-text">Length</span>
+                                            <span class="side-data">${
                                               curAnime.episodes
                                             } episodes</span>
-                                        </div>
+                                        
                                     </div>
                                     <div class="section genre-section">
                                         <div class='genres tags is-grouped-multiline'>
@@ -170,7 +171,7 @@ window.onload = function () {
         const genreSection = document.querySelectorAll(".genres");
         curAnime.genres.forEach((genre) => {
           genreSection[i].innerHTML += `
-                            <div class='tag is-info'>${genre.name}</div>`;
+                            <div class='tag genre'>${genre.name}</div>`;
         });
         box.classList.add("slider");
       });
